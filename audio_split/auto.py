@@ -42,7 +42,7 @@ def split_audio(vid_id: str, codec: str):
     args = p.parse_args()
 
     # my configs
-    args.gpu = 0
+    # args.gpu = 0
     args.output_dir = "split"
     args.input = f"audio/{vid_id}.{codec}"
 
@@ -96,38 +96,45 @@ def split_audio(vid_id: str, codec: str):
     else:
         y_spec, v_spec = sp.separate(X_spec)
 
-    print("validating output directory...", end=" ")
-    output_dir = args.output_dir
-    if output_dir != "":  # modifies output_dir if theres an arg specified
-        output_dir = output_dir.rstrip("/") + "/"
-        os.makedirs(output_dir, exist_ok=True)
-    print("done")
+    # print("validating output directory...", end=" ")
+    # output_dir = args.output_dir
+    # if output_dir != "":  # modifies output_dir if theres an arg specified
+    #     output_dir = output_dir.rstrip("/") + "/"
+    #     os.makedirs(output_dir, exist_ok=True)
+    # print("done")
 
     print("inverse stft of instruments...", end=" ")
     wave = spec_utils.spectrogram_to_wave(y_spec, hop_length=args.hop_length)
     print("done")
-    sf.write(f"{output_dir}/beats/{basename}.wav", wave.T, sr)
+    sf.write(f"{args.output_dir}/music/{basename}.mp3", wave.T, sr)
 
     print("inverse stft of vocals...", end=" ")
     wave = spec_utils.spectrogram_to_wave(v_spec, hop_length=args.hop_length)
     print("done")
-    sf.write(f"{output_dir}/vocals/{basename}.wav", wave.T, sr)
+    sf.write(f"{args.output_dir}/vocal/{basename}.mp3", wave.T, sr)
 
-    if args.output_image:
-        image = spec_utils.spectrogram_to_image(y_spec)
-        utils.imwrite("{}{}_Instruments.jpg".format(output_dir, basename), image)
-
-        image = spec_utils.spectrogram_to_image(v_spec)
-        utils.imwrite("{}{}_Vocals.jpg".format(output_dir, basename), image)
+    # if args.output_image:
+    #     image = spec_utils.spectrogram_to_image(y_spec)
+    #     utils.imwrite("{}{}_Instruments.jpg".format(output_dir, basename), image)
+    #
+    #     image = spec_utils.spectrogram_to_image(v_spec)
+    #     utils.imwrite("{}{}_Vocals.jpg".format(output_dir, basename), image)
 
 
 import pandas as pd
 
 
-def check_duplicate(req_urls: list, log_file: str) -> list:
-    log = pd.read_csv(log_file, index_col=False)["url"]
+def check_duplicate(req_urls: list, list_file: str) -> list:
+    log = pd.read_csv(list_file, index_col=False, sep=";")["url"]
     reqs = pd.Series(req_urls)
 
+    result = reqs[~reqs.isin(log)]
+    return result.tolist()
+
+
+def check_dup_ids(req_ids: list, list_file: str) -> list:
+    log = pd.read_csv(list_file, index_col=False, sep=";")["id"]
+    reqs = pd.Series(req_ids)
     result = reqs[~reqs.isin(log)]
     return result.tolist()
 
@@ -140,52 +147,113 @@ def get_requests(request_file) -> list:
 import yt_dlp
 
 
-def download_audio(save_path: str, link: str, codec: str):
+# download audio by id
+def download_audio(save_path: str, vid_id: str, codec: str) -> str | None:
     with yt_dlp.YoutubeDL(
         {
-            "extract-audio": True,
-            "format": "ba",
+            # download audio equivalent to yt-dlp -f bestaudio --extract-audio --audio-quality 0 <ID>
+            "format": f"bestaudio/best",
             "postprocessors": [
-                {  # Extract audio using ffmpeg
+                {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": codec,
+                    "preferredquality": "0",
                 }
             ],
+            # save file to save_path
             "outtmpl": f"{save_path}/%(id)s",
         }
     ) as video:
-        info_dict = video.extract_info(link, download=True)
-        video.download(link)
-        return info_dict["id"], info_dict["title"]
+        video.download(vid_id)
+        info_dict = video.extract_info(vid_id)
 
+        if info_dict is None:
+            return None
+
+        return info_dict["title"]
+
+
+import re
+
+
+def extract_video_id(url) -> str | None:
+    video_id = ""
+    regex = r"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?"
+    match = re.search(regex, url)
+    if match and len(match.group(1)) == 11:
+        video_id = match.group(1)
+    else:
+        return None
+        # raise ValueError("Invalid YouTube URL")
+    return video_id
+
+
+def get_ids(request_file) -> list:
+    with open(request_file, "r") as file:
+        urls = file.read().split("\n")[:-1]
+        ids = []
+        for url in urls:
+            vid_id = extract_video_id(url)
+            if vid_id is None:
+                print("\t" * 3 + f"Failed to extract video id from {url}")
+            else:
+                ids.append(vid_id)
+        return ids
+
+
+def check_dup_id(video_id: str, list_file: str) -> bool:
+    audio_list = pd.read_csv(list_file, index_col=False, sep=";")["id"]
+    return video_id in audio_list.values
+
+
+import datetime
 
 if __name__ == "__main__":
     request_file = "videoUrls.txt"
     audio_dir = "audio"
     log_file = "log.csv"
+    list_audios = "split/list.xlsx"
     codec = "opus"
-    # split_audio("tA47kgzzY7M", codec)
-
-    # df = pd.read_csv(log_file, index_col=False)
-    # print(df["url"])
 
     with open(log_file, "a") as file:
-        for url in check_duplicate(
-            req_urls=get_requests(request_file), log_file=log_file
-        ):
+        for url in get_requests(request_file):
+            vid_id = extract_video_id(url)
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            valid = True
+            is_duplicate = False
+
+            # timestamp;url;valid;id;id_duplicate;title;download_status;split_status
+            if vid_id is None:
+                print("\t" * 6 + f"Failed to extract video id from {url}")
+                valid = False
+                file.write(f"{ts};{url};{valid};;;;;\n")
+                continue
+
+            if check_dup_id(vid_id, list_audios):
+                print("\t" * 6 + f"Duplicate video id {vid_id}")
+                is_duplicate = True
+                file.write(f"{ts};{url};{valid};{vid_id};{is_duplicate};;;\n")
+                continue
+
+            vid_title = "None"
             download_status = "failed"
             split_status = "failed"
-            vid_id = "None"
-            vid_title = "None"
             try:
-                vid_id, vid_title = download_audio(audio_dir, url, codec)
+                vid_title = download_audio(audio_dir, vid_id, codec)
                 download_status = "success"
-                # try:
-                #     split_audio(vid_id, codec)
-                #     split_status = "success"
-                # except:
-                #     pass
+                try:
+                    split_audio(vid_id, codec)
+                    split_status = "success"
+                except:
+                    pass
             except yt_dlp.DownloadError:
                 download_status = "download error"
 
-            file.write(f"{url},{vid_id},{vid_title},{download_status},{split_status}\n")
+            file.write(
+                f"{ts};{url};{valid};{vid_id};{is_duplicate};{vid_title};{download_status};{split_status}\n"
+            )
+
+            # save to videos list as google sheet
+            if download_status == "success":
+                with open(list_audios, "a") as list_file:
+                    list_file.write(f"{vid_id};{vid_title};{url}\n")
