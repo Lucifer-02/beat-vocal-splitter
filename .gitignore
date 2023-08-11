@@ -1,6 +1,6 @@
-audio/*.*
-split/music/*.*
-split/vocal/*.*
+audio/*
+split/music/*
+split/vocal/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
