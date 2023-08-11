@@ -2,6 +2,7 @@ import argparse
 import os
 
 import librosa
+from matplotlib.pyplot import get
 import numpy as np
 import soundfile as sf
 import torch
@@ -16,6 +17,7 @@ from lib import nets
 from lib import spec_utils
 from lib import utils
 import inference
+
 
 def split_audio(vid_id: str, codec: str):
     p = argparse.ArgumentParser()
@@ -119,7 +121,18 @@ def split_audio(vid_id: str, codec: str):
         utils.imwrite("{}{}_Vocals.jpg".format(output_dir, basename), image)
 
 
-def get_urls(request_file) -> list:
+import pandas as pd
+
+
+def check_duplicate(req_urls: list, log_file: str) -> list:
+    log = pd.read_csv(log_file, index_col=False)["url"]
+    reqs = pd.Series(req_urls)
+
+    result = reqs[~reqs.isin(log)]
+    return result.tolist()
+
+
+def get_requests(request_file) -> list:
     with open(request_file, "r") as file:
         return file.read().split("\n")[:-1]
 
@@ -127,48 +140,52 @@ def get_urls(request_file) -> list:
 import yt_dlp
 
 
-def download_audio(save_path: str, link: str, codec: str) -> (str, str):
-    try:
-        with yt_dlp.YoutubeDL(
-            {
-                "extract-audio": True,
-                "format": "ba",
-                "postprocessors": [
-                    {  # Extract audio using ffmpeg
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": codec,
-                    }
-                ],
-                "outtmpl": f"{save_path}/%(id)s",
-            }
-        ) as video:
-            info_dict = video.extract_info(link, download=True)
-            video.download(link)
-            return (info_dict["id"], info_dict["title"])
-    except:
-        return (None,None)
+def download_audio(save_path: str, link: str, codec: str):
+    with yt_dlp.YoutubeDL(
+        {
+            "extract-audio": True,
+            "format": "ba",
+            "postprocessors": [
+                {  # Extract audio using ffmpeg
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": codec,
+                }
+            ],
+            "outtmpl": f"{save_path}/%(id)s",
+        }
+    ) as video:
+        info_dict = video.extract_info(link, download=True)
+        video.download(link)
+        return info_dict["id"], info_dict["title"]
 
 
 if __name__ == "__main__":
-    request_path = "./videoUrls.txt"
-    audio_path = "./audio"
+    request_file = "videoUrls.txt"
+    audio_dir = "audio"
+    log_file = "log.csv"
     codec = "opus"
     # split_audio("tA47kgzzY7M", codec)
 
-    with open("track.txt", "a") as file:
-        for url in get_urls(request_path):
-            is_download_success = False
-            is_split_success = False
-            vid_id = None
-            vid_title = None
+    # df = pd.read_csv(log_file, index_col=False)
+    # print(df["url"])
 
-            vid = download_audio(audio_path, url, codec)
-            if vid[0] != None:
-                is_download_success = True
-                vid_id = vid[0]
-                vid_title = vid[1]
-                split_audio(vid_id, codec)
-                is_split_success = True
-                
-            file.write(f"{url},{vid_id},{vid_title},{is_download_success},{is_split_success}\n")
+    with open(log_file, "a") as file:
+        for url in check_duplicate(
+            req_urls=get_requests(request_file), log_file=log_file
+        ):
+            download_status = "failed"
+            split_status = "failed"
+            vid_id = "None"
+            vid_title = "None"
+            try:
+                vid_id, vid_title = download_audio(audio_dir, url, codec)
+                download_status = "success"
+                # try:
+                #     split_audio(vid_id, codec)
+                #     split_status = "success"
+                # except:
+                #     pass
+            except yt_dlp.DownloadError:
+                download_status = "download error"
 
+            file.write(f"{url},{vid_id},{vid_title},{download_status},{split_status}\n")

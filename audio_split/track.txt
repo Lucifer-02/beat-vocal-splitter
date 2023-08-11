@@ -1,9 +1,0 @@
-url,id,title,download_success,split_success
-https://youtube/tA47kgzzY7M,None,None,False,False
-https://www.youtube.com/watch?v=aRjg6oSrY7U,aRjg6oSrY7U,❤️ Nàng Thơ Xứ Huế | Thùy Chi | Theme Song From "Nàng thơ xứ Huế" Series,False,True
-https://www.youtube.com/watch?v=u2Ix73ePWDs,u2Ix73ePWDs,Giấc Mơ Trưa | Thùy Chi | Audio MV,False,True
-https://www.youtube.com/watch?v=v1ADEPnPt54,v1ADEPnPt54,MẶT MỘC | Phạm Nguyên Ngọc x VAnh x Ân Nhi (Original),False,True
-https://youtube/tA47kgzzY7M,None,None,False,False
-https://www.youtube.com/watch?v=aRjg6oSrY7U,aRjg6oSrY7U,❤️ Nàng Thơ Xứ Huế | Thùy Chi | Theme Song From "Nàng thơ xứ Huế" Series,True,True
-https://www.youtube.com/watch?v=u2Ix73ePWDs,u2Ix73ePWDs,Giấc Mơ Trưa | Thùy Chi | Audio MV,True,True
-https://www.youtube.com/watch?v=v1ADEPnPt54,v1ADEPnPt54,MẶT MỘC | Phạm Nguyên Ngọc x VAnh x Ân Nhi (Original),True,True
