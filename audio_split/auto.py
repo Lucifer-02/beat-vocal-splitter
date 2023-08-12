@@ -106,7 +106,7 @@ def split_audio(vid_id: str, codec: str):
     print("inverse stft of instruments...", end=" ")
     wave = spec_utils.spectrogram_to_wave(y_spec, hop_length=args.hop_length)
     print("done")
-    sf.write(f"{args.output_dir}/music/{basename}.mp3", wave.T, sr)
+    sf.write(f"{args.output_dir}/beat/{basename}.mp3", wave.T, sr)
 
     print("inverse stft of vocals...", end=" ")
     wave = spec_utils.spectrogram_to_wave(v_spec, hop_length=args.hop_length)
