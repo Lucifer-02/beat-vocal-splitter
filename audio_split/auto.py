@@ -42,7 +42,7 @@ def split_audio(vid_id: str, codec: str):
     args = p.parse_args()
 
     # my configs
-    # args.gpu = 0
+    args.gpu = 0
     args.output_dir = "split"
     args.input = f"audio/{vid_id}.{codec}"
 
