@@ -9,8 +9,8 @@ import torch
 
 import sys
 
-sys.path.append("vocal_remover/")
-sys.path.append("vocal_remover/models")
+sys.path.append("vocal-remover/")
+sys.path.append("vocal-remover/models")
 
 from lib import dataset
 from lib import nets
@@ -26,7 +26,7 @@ def split_audio(vid_id: str, codec: str):
         "--pretrained_model",
         "-P",
         type=str,
-        default="./vocal_remover/models/baseline.pth",
+        default="./vocal-remover/models/baseline.pth",
     )
     p.add_argument("--input", "-i", required=False)
     p.add_argument("--sr", "-r", type=int, default=44100)
@@ -35,10 +35,9 @@ def split_audio(vid_id: str, codec: str):
     p.add_argument("--batchsize", "-B", type=int, default=4)
     p.add_argument("--cropsize", "-c", type=int, default=256)
     p.add_argument("--output_image", "-I", action="store_true")
-    p.add_argument("--postprocess", "-p", action="store_true")
     p.add_argument("--tta", "-t", action="store_true")
+    # p.add_argument("--postprocess", "-p", action="store_true")
     p.add_argument("--output_dir", "-o", type=str, default="")
-
     args = p.parse_args()
 
     # my configs
@@ -61,7 +60,7 @@ def split_audio(vid_id: str, codec: str):
 
     print("loading model...", end=" ")
     device = torch.device("cpu")
-    model = nets.CascadedNet(args.n_fft, 32, 128)
+    model = nets.CascadedNet(args.n_fft, args.hop_length, 32, 128)
     model.load_state_dict(torch.load(args.pretrained_model, map_location=device))
     if args.gpu >= 0:
         if torch.cuda.is_available():
@@ -87,9 +86,7 @@ def split_audio(vid_id: str, codec: str):
     X_spec = spec_utils.wave_to_spectrogram(X, args.hop_length, args.n_fft)
     print("done")
 
-    sp = inference.Separator(
-        model, device, args.batchsize, args.cropsize, args.postprocess
-    )
+    sp = inference.Separator(model, device, args.batchsize, args.cropsize)
 
     if args.tta:
         y_spec, v_spec = sp.separate_tta(X_spec)
@@ -195,7 +192,7 @@ def get_ids(request_file) -> list:
         for url in urls:
             vid_id = extract_video_id(url)
             if vid_id is None:
-                print("\t" * 3 + f"Failed to extract video id from {url}")
+                print(f"\tFailed to extract video id from {url}")
             else:
                 ids.append(vid_id)
         return ids
@@ -230,7 +227,7 @@ if __name__ == "__main__":
                 continue
 
             if check_dup_id(vid_id, list_audios):
-                print("\t" * 6 + f"Duplicate video id {vid_id}")
+                print("\t" * 2 + f"Duplicate video id {vid_id}")
                 is_duplicate = True
                 file.write(f"{ts};{url};{valid};{vid_id};{is_duplicate};;;\n")
                 continue

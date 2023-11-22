@@ -4,7 +4,7 @@ clean:
 	rm split/vocal/*
 
 run:
-	python3 auto.py && rclone sync split/ lucifer_drive:split --verbose
+	python3 auto.py 
 
 upload:
 	rclone sync split/ lucifer_drive:split --verbose
