@@ -3,7 +3,7 @@ clean:
 	rm split/music/*
 	rm split/vocal/*
 
-split:
+auto:
 	python3 auto.py 
 
 upload:

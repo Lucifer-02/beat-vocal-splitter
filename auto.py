@@ -241,8 +241,8 @@ if __name__ == "__main__":
                 try:
                     split_audio(vid_id, codec)
                     split_status = "success"
-                except:
-                    pass
+                except Exception as e:
+                    raise e
             except yt_dlp.DownloadError:
                 download_status = "download error"
 
