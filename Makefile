@@ -6,7 +6,7 @@ clean:
 auto:
 	python3 auto.py 
 
-upload:
+sync:
 	rclone bisync split/ split:split --verbose
 
 run:
