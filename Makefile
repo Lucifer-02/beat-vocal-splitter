@@ -7,7 +7,7 @@ auto:
 	python3 auto.py 
 
 upload:
-	rclone sync split/ lucifer_drive:split --verbose
+	rclone bisync split/ split:split --verbose
 
 run:
 	# python3 auto.py && rclone sync split/ lucifer_drive:split --verbose
