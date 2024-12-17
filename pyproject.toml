@@ -1,0 +1,17 @@
+[project]
+name = "beat-vocal-splitter"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "ipython>=8.30.0",
+    "librosa>=0.10.2.post1",
+    "matplotlib>=3.10.0",
+    "numpy>=2.0.2",
+    "opencv-python>=4.10.0.84",
+    "pandas>=2.2.3",
+    "resampy>=0.4.3",
+    "tqdm>=4.67.1",
+    "yt-dlp>=2024.12.13",
+]
